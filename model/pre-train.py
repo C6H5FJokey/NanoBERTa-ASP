@@ -6,7 +6,7 @@
 # Some imports
 from transformers import (
     RobertaConfig,
-    RobertaTokenizer,
+    RobertaTokenizerFast,
     RobertaForMaskedLM,
     DataCollatorForLanguageModeling,
     TrainingArguments,
@@ -16,7 +16,7 @@ from datasets import load_dataset
 import os
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 # Initialise the tokenizer of antibody
-tokenizer = RobertaTokenizer.from_pretrained(
+tokenizer = RobertaTokenizerFast.from_pretrained(
     "tokenizer"
 )
 
@@ -25,9 +25,9 @@ collator = DataCollatorForLanguageModeling(
     tokenizer=tokenizer, mlm=True, mlm_probability=0.15
 )
 text_datasets = {
-    "train": ['assets/pre-train.txt'],
-    "eval": ['assets/pre-val.txt'],
-    "test": ['assets/pre-test.txt']
+    "train": ['assets/mlm-train.txt'],
+    "eval": ['assets/mlm-val.txt'],
+    "test": ['assets/mlm-test.txt']
 }
 
 dataset = load_dataset("text", data_files=text_datasets)

@@ -160,5 +160,5 @@ input_dir = 'all_structures/imgt/' # Path containing PDB files
 
 
 if __name__ == '__main__':
-    run(()
+    run()
     pass
