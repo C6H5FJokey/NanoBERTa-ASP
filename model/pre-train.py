@@ -14,7 +14,6 @@ from transformers import (
 )
 from datasets import load_dataset
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 # Initialise the tokenizer of antibody
 tokenizer = RobertaTokenizerFast.from_pretrained(
     "tokenizer"
@@ -51,7 +50,7 @@ NanoBERTa_config = {
     "vocab_size": 25,
     "max_len": 150,
     "max_position_embeddings": 152,
-    "batch_size": 96,
+    "batch_size": 64,
     "max_steps": 225000,
     "weight_decay": 0.01,
     "peak_learning_rate": 0.0001,
@@ -92,6 +91,8 @@ trainer = Trainer(
     train_dataset=tokenized_dataset["train"],
     eval_dataset=tokenized_dataset["eval"]
 )
+
+trainer.train()
 # Predict MLM performance on the test dataset
-result = trainer.predict(tokenized_dataset['test'])
-print(result)
+# result = trainer.predict(tokenized_dataset['test'])
+# print(result)
