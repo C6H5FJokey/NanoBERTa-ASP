@@ -63,7 +63,7 @@ def preprocess(batch):
         tokenized_input_length = len(batch['input_ids'][index])
         paratope_label_length = len(batch['paratope_labels'][index])
 
-        n_pads_with_eos = max(0, tokenized_input_length - paratope_label_length - 2) # 修改 padding 计算
+        n_pads_with_eos = max(1, tokenized_input_length - paratope_label_length - 1) # 修改 padding 计算
 
         labels_padded = [-100] + labels + [-100] * n_pads_with_eos # 使用 -100 作为 padding
 
