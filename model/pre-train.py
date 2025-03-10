@@ -14,6 +14,7 @@ from transformers import (
 )
 from datasets import load_dataset
 import os
+import torch
 # Initialise the tokenizer of antibody
 tokenizer = RobertaTokenizerFast.from_pretrained(
     "tokenizer"
@@ -42,6 +43,33 @@ tokenized_dataset = dataset.map(
     batched=True,
     remove_columns=["text"],
 )
+
+def compute_metrics(eval_pred):
+    """
+    Compute metrics for evaluation.
+    For MLM, the primary metrics are loss and perplexity.
+    """
+    logits, labels = eval_pred
+    predictions = logits.argmax(axis=-1)
+    
+    # Mask out padding tokens
+    mask = labels != -100
+    labels_filtered = labels[mask]
+    predictions_filtered = predictions[mask]
+    
+    # Calculate accuracy
+    accuracy = (predictions_filtered == labels_filtered).mean()
+    
+    # Calculate perplexity
+    loss = eval_pred.loss
+    perplexity = float(torch.exp(torch.tensor(loss)))
+    
+    return {
+        "accuracy": float(accuracy),
+        "perplexity": perplexity,
+        "loss": loss
+    }
+
 NanoBERTa_config = {
     "num_hidden_layers": 12,
     "num_attention_heads": 12,
@@ -81,15 +109,16 @@ args = TrainingArguments(
     learning_rate=1e-4,
     gradient_accumulation_steps=NanoBERTa_config.get("gradient_accumulation_steps", 1),
     fp16=True,
-    evaluation_strategy="steps",
-    seed=42  # uses a default seed(42)
+    eval_strategy="steps",
+    seed=42,  # uses a default seed(42)
 )
 trainer = Trainer(
     model=model,
     args=args,
     data_collator=collator,
     train_dataset=tokenized_dataset["train"],
-    eval_dataset=tokenized_dataset["eval"]
+    eval_dataset=tokenized_dataset["eval"],
+    compute_metrics=compute_metrics
 )
 
 trainer.train()

@@ -28,7 +28,7 @@ import numpy as np
 import random
 import os
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-TOKENIZER_DIR = "antibody-tokenizer"
+TOKENIZER_DIR = "tokenizer"
 history = []
 # Initialise a tokenizer
 tokenizer = RobertaTokenizer.from_pretrained(TOKENIZER_DIR, max_len=150)
