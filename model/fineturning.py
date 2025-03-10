@@ -101,16 +101,16 @@ def compute_metrics(p):
     predictions = np.argmax(predictions, axis=2)
 
     preds = [
-        [label_list[p] for (p, l) in zip(prediction, label) if l != -255]
+        [label_list[p] for (p, l) in zip(prediction, label) if l != -100]
         for prediction, label in zip(predictions, labels)
     ]
     labs = [
-        [label_list[l] for (p, l) in zip(prediction, label) if l != -255]
+        [label_list[l] for (p, l) in zip(prediction, label) if l != -100]
         for prediction, label in zip(predictions, labels)
     ]
 
     probs = [
-        [prediction_pr[i][pos] for (pr, (pos, l)) in zip(prediction, enumerate(label)) if l != -255]
+        [prediction_pr[i][pos] for (pr, (pos, l)) in zip(prediction, enumerate(label)) if l != -100]
         for i, (prediction, label) in enumerate(zip(predictions, labels))
     ]
 
