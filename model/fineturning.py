@@ -2,7 +2,7 @@
 # fine-tuning
 # --------------------------------
 from transformers import (
-    RobertaTokenizer,
+    RobertaTokenizerFast,
     RobertaForTokenClassification,
     Trainer,
     TrainingArguments
@@ -30,7 +30,7 @@ import os
 TOKENIZER_DIR = "tokenizer"
 history = []
 # Initialise a tokenizer
-tokenizer = RobertaTokenizer.from_pretrained(TOKENIZER_DIR, max_len=150)
+tokenizer = RobertaTokenizerFast.from_pretrained(TOKENIZER_DIR, max_len=150)
 train_df = pd.read_parquet(
     'assets/nanotrain.parquet'
 )
@@ -53,7 +53,7 @@ fine_tuning_dataset_featurised = fine_tuning_dataset.map(
 
 def preprocess(batch):
     t_inputs = tokenizer(batch['sequence'],
-                         padding="max_length")
+                         padding="max_length", truncation=True, max_length=150)  # 添加 truncation
     batch['input_ids'] = t_inputs.input_ids
     batch['attention_mask'] = t_inputs.attention_mask
 
@@ -63,9 +63,9 @@ def preprocess(batch):
         tokenized_input_length = len(batch['input_ids'][index])
         paratope_label_length = len(batch['paratope_labels'][index])
 
-        n_pads_with_eos = max(1, tokenized_input_length - paratope_label_length - 1)
+        n_pads_with_eos = max(0, tokenized_input_length - paratope_label_length - 2) # 修改 padding 计算
 
-        labels_padded = [-255] + labels + [-255] * n_pads_with_eos
+        labels_padded = [-100] + labels + [-100] * n_pads_with_eos # 使用 -100 作为 padding
 
         assert len(labels_padded) == len(batch['input_ids'][index]), \
             f"Lengths don't align, {len(labels_padded)}, {len(batch['input_ids'][index])}, {len(labels)}"
@@ -76,6 +76,8 @@ def preprocess(batch):
 
     for i, v in enumerate(batch['labels']):
         assert len(batch['input_ids'][i]) == len(v) == len(batch['attention_mask'][i])
+
+    batch['labels'] = [torch.tensor(l, dtype=torch.long) for l in batch['labels']] # 转换为 torch.long
 
     return batch
 
