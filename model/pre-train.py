@@ -18,6 +18,7 @@ import torch
 from native_sparse_attention_pytorch import SparseAttention
 
 # Custom RoBERTa with SparseAttention
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class RobertaForMaskedLMWithSparseAttention(RobertaForMaskedLM):
     def __init__(self, config):
         super().__init__(config)
@@ -36,7 +37,7 @@ class RobertaForMaskedLMWithSparseAttention(RobertaForMaskedLM):
                 compress_block_size=8,
                 selection_block_size=8,
                 num_selected_blocks=4
-            )
+            ).to(device)
             
             # Create a forward hook to replace the attention operation
             def create_forward_hook(sparse_attention):
@@ -131,8 +132,8 @@ model_config = RobertaConfig(
     num_attention_heads=NanoBERTa_config.get("num_attention_heads", 12),
     type_vocab_size=1,
 )
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = RobertaForMaskedLMWithSparseAttention(model_config).to(device)
+
+model = RobertaForMaskedLMWithSparseAttention(model_config)
 # construct training arguments
 args = TrainingArguments(
     output_dir="test_nsa",

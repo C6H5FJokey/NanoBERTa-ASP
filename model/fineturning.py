@@ -32,6 +32,7 @@ import os
 from native_sparse_attention_pytorch import SparseAttention
 TOKENIZER_DIR = "tokenizer"
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class RobertaForTokenClassificationWithSparseAttention(RobertaForTokenClassification):
     def __init__(self, config):
         super().__init__(config)
@@ -49,7 +50,7 @@ class RobertaForTokenClassificationWithSparseAttention(RobertaForTokenClassifica
                 compress_block_size=8,
                 selection_block_size=8,
                 num_selected_blocks=4
-            )
+            ).to(device)
 
             # 替换 attention 层
             layer.attention.self = sparse_attn  # 直接替换
@@ -209,8 +210,7 @@ set_seed(SEED)
 MODEL_DIR = "NanoBERTa-pre"
 
 # We initialise a model using the weights from the pre-trained model
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = RobertaForTokenClassificationWithSparseAttention.from_pretrained(MODEL_DIR, num_labels=2).to(device)
+model = RobertaForTokenClassificationWithSparseAttention.from_pretrained(MODEL_DIR, num_labels=2)
 
 trainer = Trainer(
     model,
