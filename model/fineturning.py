@@ -5,7 +5,8 @@ from transformers import (
     RobertaTokenizerFast,
     RobertaForTokenClassification,
     Trainer,
-    TrainingArguments
+    TrainingArguments,
+    RobertaConfig
 )
 from datasets import (
     Dataset,
@@ -24,10 +25,48 @@ from sklearn.metrics import (
 import matplotlib.pyplot as plt
 import pandas as pd
 import torch
+from torch import nn
 import numpy as np
 import random
 import os
+from native_sparse_attention_pytorch import SparseAttention
 TOKENIZER_DIR = "tokenizer"
+
+class RobertaForTokenClassificationWithSparseAttention(RobertaForTokenClassification):
+    def __init__(self, config):
+        super().__init__(config)
+        # 替换 attention 层
+        for i, layer in enumerate(self.roberta.encoder.layer):
+            hidden_size = config.hidden_size
+            num_heads = config.num_attention_heads
+
+            # 创建 sparse attention 模块
+            sparse_attn = SparseAttention(
+                dim=hidden_size,
+                dim_head=hidden_size // num_heads,
+                heads=num_heads,
+                sliding_window_size=4,
+                compress_block_size=8,
+                selection_block_size=8,
+                num_selected_blocks=4
+            )
+
+            # 替换 attention 层
+            layer.attention.self = sparse_attn  # 直接替换
+            
+            # 确保输出维度正确
+            self.config.hidden_size = hidden_size
+            self.classifier = nn.Linear(hidden_size, config.num_labels) # 重新定义分类器
+
+    @classmethod
+    def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
+        config = RobertaConfig.from_pretrained(pretrained_model_name_or_path, **kwargs)
+        model = cls(config)
+        model.roberta.load_state_dict(
+            RobertaForTokenClassification.from_pretrained(pretrained_model_name_or_path).roberta.state_dict()
+        )
+        return model
+
 history = []
 # Initialise a tokenizer
 tokenizer = RobertaTokenizerFast.from_pretrained(TOKENIZER_DIR, max_len=150)
@@ -133,7 +172,7 @@ def compute_metrics(p):
 
 
 batch_size = 32
-RUN_ID = "ASP"
+RUN_ID = "ASP_NSA"
 SEED = 0
 LR = 1e-6
 
@@ -170,7 +209,7 @@ set_seed(SEED)
 MODEL_DIR = "NanoBERTa-pre"
 
 # We initialise a model using the weights from the pre-trained model
-model = RobertaForTokenClassification.from_pretrained(MODEL_DIR, num_labels=2)
+model = RobertaForTokenClassificationWithSparseAttention.from_pretrained(MODEL_DIR, num_labels=2)
 
 trainer = Trainer(
     model,

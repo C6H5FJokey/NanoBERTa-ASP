@@ -15,6 +15,45 @@ from transformers import (
 from datasets import load_dataset
 import os
 import torch
+from native_sparse_attention_pytorch import SparseAttention
+
+# Custom RoBERTa with SparseAttention
+class RobertaForMaskedLMWithSparseAttention(RobertaForMaskedLM):
+    def __init__(self, config):
+        super().__init__(config)
+        
+        # Replace the standard attention with SparseAttention in all layers
+        for i, layer in enumerate(self.roberta.encoder.layer):
+            hidden_size = config.hidden_size
+            num_heads = config.num_attention_heads
+            
+            # Create sparse attention module
+            sparse_attn = SparseAttention(
+                dim=hidden_size,
+                dim_head=hidden_size // num_heads,
+                heads=num_heads,
+                sliding_window_size=4,
+                compress_block_size=8,
+                selection_block_size=8,
+                num_selected_blocks=4
+            )
+            
+            # Create a forward hook to replace the attention operation
+            def create_forward_hook(sparse_attention):
+                def hook(module, input, output):
+                    hidden_states = input[0]
+                    attention_mask = input[1] if len(input) > 1 else None
+                    
+                    # Apply sparse attention
+                    attended = sparse_attention(hidden_states)
+                    
+                    # Return tuple to match the expected output format
+                    return (attended, None)  # None for attention weights
+                return hook
+            
+            # Register the hook
+            layer.attention.self.register_forward_hook(create_forward_hook(sparse_attn))
+
 # Initialise the tokenizer of antibody
 tokenizer = RobertaTokenizerFast.from_pretrained(
     "tokenizer"
@@ -92,10 +131,10 @@ model_config = RobertaConfig(
     num_attention_heads=NanoBERTa_config.get("num_attention_heads", 12),
     type_vocab_size=1,
 )
-model = RobertaForMaskedLM(model_config)
+model = RobertaForMaskedLMWithSparseAttention(model_config)
 # construct training arguments
 args = TrainingArguments(
-    output_dir="test",
+    output_dir="test_nsa",
     overwrite_output_dir=True,
     per_device_train_batch_size=NanoBERTa_config.get("batch_size", 32),
     per_device_eval_batch_size=NanoBERTa_config.get("batch_size", 32),
