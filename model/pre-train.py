@@ -131,7 +131,8 @@ model_config = RobertaConfig(
     num_attention_heads=NanoBERTa_config.get("num_attention_heads", 12),
     type_vocab_size=1,
 )
-model = RobertaForMaskedLMWithSparseAttention(model_config)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = RobertaForMaskedLMWithSparseAttention(model_config).to(device)
 # construct training arguments
 args = TrainingArguments(
     output_dir="test_nsa",

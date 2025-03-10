@@ -209,7 +209,8 @@ set_seed(SEED)
 MODEL_DIR = "NanoBERTa-pre"
 
 # We initialise a model using the weights from the pre-trained model
-model = RobertaForTokenClassificationWithSparseAttention.from_pretrained(MODEL_DIR, num_labels=2)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = RobertaForTokenClassificationWithSparseAttention.from_pretrained(MODEL_DIR, num_labels=2).to(device)
 
 trainer = Trainer(
     model,
